@@ -19,12 +19,12 @@ A web app deployed across 2 AZs with an ALB distributing traffic and an ASG mana
 ## Architecture
 
 ```
-Internet
-    ↓
-Application Load Balancer (ALB)
-    ↓              ↓
-  AZ-1           AZ-2
-  EC2            EC2
+          Internet
+             ↓
+Application     Load Balancer (ALB)
+    ↓                ↓
+  AZ-1             AZ-2
+   EC2               EC2
   (Auto Scaling Group spans both)
 ```
 
