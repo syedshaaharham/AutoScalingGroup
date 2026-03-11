@@ -1,0 +1,193 @@
+#!/bin/bash
+yum update -y
+yum install -y httpd
+systemctl start httpd
+systemctl enable httpd
+
+TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" \
+  -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+
+EC2_AZ=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" \
+  http://169.254.169.254/latest/meta-data/placement/availability-zone)
+
+EC2_ID=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" \
+  http://169.254.169.254/latest/meta-data/instance-id)
+
+cat > /var/www/html/index.html <<EOF
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-AZ Failover Demo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            min-height: 100vh;
+            background: #0a0a0a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Space Grotesk', sans-serif;
+            overflow: hidden;
+        }
+
+        .grid-bg {
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255,153,0,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,153,0,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        .glow {
+            position: fixed;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(255,153,0,0.08) 0%, transparent 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
+        .card {
+            position: relative;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,153,0,0.2);
+            border-radius: 16px;
+            padding: 50px 60px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 60px rgba(255,153,0,0.05);
+            max-width: 600px;
+            width: 90%;
+            animation: fadeIn 0.8s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .aws-badge {
+            display: inline-block;
+            background: rgba(255,153,0,0.1);
+            border: 1px solid rgba(255,153,0,0.3);
+            color: #FF9900;
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            padding: 6px 16px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #ffffff;
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .subtitle {
+            color: rgba(255,255,255,0.3);
+            font-size: 13px;
+            font-weight: 300;
+            margin-bottom: 40px;
+            letter-spacing: 1px;
+        }
+
+        .divider {
+            border: none;
+            border-top: 1px solid rgba(255,153,0,0.15);
+            margin: 30px 0;
+        }
+
+        .info-block {
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .label {
+            color: rgba(255,255,255,0.3);
+            font-size: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .value {
+            color: #FF9900;
+            font-size: 18px;
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 1px;
+            word-break: break-all;
+        }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0,255,100,0.05);
+            border: 1px solid rgba(0,255,100,0.2);
+            border-radius: 20px;
+            padding: 8px 20px;
+            margin-top: 30px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            background: #00ff64;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.8); }
+        }
+
+        .status-text {
+            color: #00ff64;
+            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+    <div class="grid-bg"></div>
+    <div class="glow"></div>
+    <div class="card">
+        <div class="aws-badge">AWS Multi-AZ Demo</div>
+        <h1>Failover Active</h1>
+        <p class="subtitle">Auto Scaling Group · Application Load Balancer</p>
+        <hr class="divider">
+        <div class="info-block">
+            <div class="label">Instance ID</div>
+            <div class="value">$EC2_ID</div>
+        </div>
+        <div class="info-block">
+            <div class="label">Availability Zone</div>
+            <div class="value">$EC2_AZ</div>
+        </div>
+        <hr class="divider">
+        <div class="status">
+            <div class="dot"></div>
+            <span class="status-text">Instance Healthy</span>
+        </div>
+    </div>
+</body>
+</html>
+EOF
