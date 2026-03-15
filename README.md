@@ -78,13 +78,4 @@ A full video walkthrough showing the instance termination and automatic recovery
 
 ---
 
-## Connect
-
-Built by **Syed Shah Arham** as part of a hands-on AWS Cloud Engineering journey.
-
-- LinkedIn: [linkedin.com/in/syedshaharham](https://linkedin.com/in/syedshaharham)
-- GitHub: [github.com/syedshaharham-2006](https://github.com/syedshaaharham)
-
----
-
 *The foundation is being built. One project at a time. 🚀*
